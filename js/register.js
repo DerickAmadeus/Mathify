@@ -1,3 +1,4 @@
+const backendUrl = 'https://mathify-backend-production.up.railway.app';
 // register.js - handles register form submission
 document.addEventListener('DOMContentLoaded', function () {
   const form = document.getElementById('register-form');
@@ -35,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function () {
     submitBtn.style.opacity = '0.7';
 
     try {
-      const res = await fetch('/api/users', {
+      const res = await fetch(`${backendUrl}/api/users`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, email, password })

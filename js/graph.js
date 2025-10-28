@@ -1,3 +1,4 @@
+const backendUrl = 'https://mathify-backend-production.up.railway.app';
 // ===================================
 // GRAPH HISTORY FUNCTIONS
 // ===================================
@@ -35,7 +36,7 @@ async function saveToGraphHistory(functionExpression) {
     try {
         // Hanya simpan jika functionExpression tidak kosong
         if (functionExpression && functionExpression.trim() !== '') {
-            await fetch('/api/graph/history', {
+            await fetch(`${backendUrl}/api/graph/history`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -57,7 +58,7 @@ async function fetchGraphHistory() {
     if (!user || !user.id) return;
 
     try {
-        const response = await fetch(`/api/graph/history?user_id=${user.id}`);
+        const response = await fetch(`${backendUrl}/api/graph/history?user_id=${user.id}`);
         if (!response.ok) throw new Error('Failed to fetch history');
         
         const data = await response.json();
@@ -140,7 +141,7 @@ function setupGraphHistoryModal() {
         if (!user || !user.id) return;
 
         try {
-            const response = await fetch(`/api/graph/history?user_id=${user.id}`, {
+            const response = await fetch(`${backendUrl}/api/graph/history?user_id=${user.id}`, {
                 method: 'DELETE'
             });
 

@@ -1,3 +1,5 @@
+
+const backendUrl = 'https://mathify-backend-production.up.railway.app';
 /**
  * Utility function to show error message
  */
@@ -35,7 +37,7 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     submitBtn.innerHTML = '<span>Loading...</span>';
 
-    const response = await fetch('/api/users/auth/login', {
+    const response = await fetch(`${backendUrl}/api/users/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password })

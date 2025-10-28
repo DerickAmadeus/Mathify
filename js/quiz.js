@@ -1,3 +1,4 @@
+const backendUrl = 'https://mathify-backend-production.up.railway.app';
 // Quiz Configuration
 const QUIZ_CONFIG = {
     get totalQuestions() {
@@ -24,7 +25,7 @@ let questions = [];
 
 async function fetchQuestionsByModule(moduleId) {
     try {
-        const response = await fetch(`/api/questions?module_id=${moduleId}`);
+        const response = await fetch(`${backendUrl}/api/questions?module_id=${moduleId}`);
         if (!response.ok) throw new Error('Failed to fetch questions');
         questions = await response.json();
     } catch (error) {
@@ -54,7 +55,7 @@ async function loadModuleData() {
         }
         
         // Check if module already completed
-        const progressResponse = await fetch(`/api/modules/${module.id}/progress?user_id=${userId}`);
+        const progressResponse = await fetch(`${backendUrl}/api/modules/${module.id}/progress?user_id=${userId}`);
         const progressResult = await progressResponse.json();
         
         if (progressResult.success && progressResult.data && progressResult.data.status === 'completed') {
@@ -64,7 +65,7 @@ async function loadModuleData() {
         }
         
         // Fetch full module data from API
-        const response = await fetch(`/api/modules/${module.id}`);
+        const response = await fetch(`${backendUrl}/api/modules/${module.id}`);
         if (!response.ok) {
             throw new Error('Failed to fetch module data');
         }
@@ -648,7 +649,7 @@ async function saveQuizResults(rightAnswer, wrongAnswer) {
         
         const module = JSON.parse(moduleInfo);
         
-        const response = await fetch(`/api/modules/${module.id}/progress`, {
+        const response = await fetch(`${backendUrl}/api/modules/${module.id}/progress`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

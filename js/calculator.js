@@ -1,3 +1,4 @@
+const backendUrl = 'https://mathify2-production.up.railway.app/'; // Ganti dengan URL Railway/Render-mu
 let displayExpression = '';
 let justCalculated = false;
 
@@ -222,7 +223,7 @@ async function fetchHistory() {
         }
 
         const user = JSON.parse(userData);
-        const response = await fetch(`/api/calculator/history?user_id=${user.id}`);
+        const response = await fetch(`${backendUrl}/api/calculator/history?user_id=${user.id}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -293,7 +294,7 @@ function setupHistoryModal() {
 
         const user = JSON.parse(userData);
         try {
-            const response = await fetch(`/api/calculator/history?user_id=${user.id}`, {
+            const response = await fetch(`${backendUrl}/api/calculator/history?user_id=${user.id}`, {
                 method: 'DELETE'
             });
 
@@ -339,7 +340,7 @@ async function saveToHistory(expression, result) {
 
     console.log('📤 Kirim data ke backend:', { user_id: userId, expression, result });
 
-    const response = await fetch('/api/calculator/history', {
+    const response = await fetch(`${backendUrl}/api/calculator/history`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

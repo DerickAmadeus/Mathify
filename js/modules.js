@@ -1,3 +1,4 @@
+const backendUrl = 'https://mathify-backend-production.up.railway.app';
 /**
  * Modules Page - Fetch and display practice modules from database
  */
@@ -7,7 +8,7 @@
  */
 async function fetchModules() {
     try {
-        const response = await fetch('/api/modules');
+        const response = await fetch(`${backendUrl}/api/modules`);
         const result = await response.json();
 
         if (!response.ok) {
@@ -27,7 +28,7 @@ async function fetchModules() {
  */
 async function fetchProgress(moduleId, userId) {
     try {
-        const response = await fetch(`/api/modules/${moduleId}/progress?user_id=${userId}`);
+        const response = await fetch(`${backendUrl}/api/modules/${moduleId}/progress?user_id=${userId}`);
         const result = await response.json();
 
         if (!response.ok) {
