@@ -1,4 +1,4 @@
-const backendUrl = 'https://mathify-backend-production.up.railway.app';
+const backendUrl = 'https://mathify2-production.up.railway.app/';
 // Quiz Configuration
 const QUIZ_CONFIG = {
     get totalQuestions() {
