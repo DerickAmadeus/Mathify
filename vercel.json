@@ -1,0 +1,13 @@
+{
+  "rewrites": [
+    { "source": "/calculator", "destination": "/pages/calculator.html" },
+    { "source": "/graph", "destination": "/pages/graph.html" },
+    { "source": "/login", "destination": "/pages/login.html" },
+    { "source": "/modules", "destination": "/pages/modules.html" },
+    { "source": "/quiz", "destination": "/pages/quiz.html" },
+    { "source": "/register", "destination": "/pages/register.html" }
+  ],
+  "redirects": [
+    { "source": "/", "destination": "/login", "permanent": true }
+  ]
+}
