@@ -1,72 +1,353 @@
-
-const backendUrl = 'https://mathify2-production.up.railway.app';
+const backendURL = 'https://mathify2-production.up.railway.app';
 /**
- * Utility function to show error message
+ * Modules Page - Fetch and display practice modules from database
+ */
+
+/**
+ * Fetch modules from API
+ */
+async function fetchModules() {
+    try {
+        const response = await fetch(`${backendURL}/api/modules`);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to fetch modules');
+        }
+
+        return result.data || [];
+    } catch (err) {
+        console.error('Error fetching modules:', err);
+        showError('Gagal memuat modul. Silakan refresh halaman.');
+        return [];
+    }
+}
+
+/**
+ * Fetch user's progress for a module
+ */
+async function fetchProgress(moduleId, userId) {
+    try {
+        const response = await fetch(`${backendURL}/api/modules/${moduleId}/progress?user_id=${userId}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.error || 'Failed to fetch progress');
+        }
+
+        return result.data;
+    } catch (err) {
+        console.error('Error fetching progress:', err);
+        return null;
+    }
+}
+
+/**
+ * Get current user ID from localStorage
+ */
+function getCurrentUserId() {
+    const user = localStorage.getItem('user');
+    if (!user) return null;
+    
+    try {
+        const userData = JSON.parse(user);
+        return userData.id;
+    } catch (err) {
+        return null;
+    }
+}
+
+/**
+ * Show error message
  */
 function showError(message) {
-  const errorDiv = document.getElementById('error-message');
-  if (errorDiv) {
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-  }
+    const container = document.getElementById('soalContainer');
+    if (container) {
+        container.innerHTML = `
+            <div class="error-box" style="padding: 2rem; text-align: center; color: #ef4444;">
+                <p>${message}</p>
+                <button onclick="location.reload()" style="margin-top: 1rem; padding: 0.5rem 1rem; background: #667eea; color: white; border: none; border-radius: 0.5rem; cursor: pointer;">
+                    Refresh
+                </button>
+            </div>
+        `;
+    }
 }
 
 /**
- * Utility function to hide error message
+ * Show loading state
  */
-function hideError() {
-  const errorDiv = document.getElementById('error-message');
-  if (errorDiv) {
-    errorDiv.style.display = 'none';
-    errorDiv.textContent = '';
-  }
+function showLoading() {
+    const container = document.getElementById('soalContainer');
+    if (container) {
+        container.innerHTML = `
+            <div class="loading-box" style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.7);">
+                <p>Loading modules...</p>
+            </div>
+        `;
+    }
 }
 
-document.getElementById('login-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  
-  // Clear previous errors
-  hideError();
-  
-  const username = document.getElementById('username').value;
-  const password = document.getElementById('password').value;
-  
-  try {
-    // Disable button saat proses
-    const submitBtn = document.querySelector('.login-button');
-    submitBtn.disabled = true;
-    submitBtn.innerHTML = '<span>Loading...</span>';
+/**
+ * Get difficulty badge color
+ */
+function getDifficultyColor(difficulty) {
+    const colors = {
+        'easy': '#10b981',
+        'medium': '#f59e0b',
+        'hard': '#ef4444'
+    };
+    return colors[difficulty?.toLowerCase()] || '#667eea';
+}
 
-    const response = await fetch(`${backendUrl}/api/users/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok && data.success) {
-      // Simpan user ke localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // Redirect ke calculator
-      window.location.href = '/calculator';
-    } else {
-      // Tampilkan error di div
-      const errorMsg = data.error || data.details?.[0] || 'Login gagal';
-      showError(errorMsg);
-      
-      // Re-enable button
-      submitBtn.disabled = false;
-      submitBtn.innerHTML = '<span>Sign In</span><svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>';
+/**
+ * Escape HTML to prevent XSS attacks
+ */
+function escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+/**
+ * Generate module boxes from API data
+ */
+async function generateModuleBoxes(modules) {
+    const container = document.getElementById('soalContainer');
+    if (!container) return;
+
+    if (!modules || modules.length === 0) {
+        container.innerHTML = `
+            <div class="empty-box" style="padding: 2rem; text-align: center; color: rgba(255,255,255,0.6);">
+                <p>Belum ada modul tersedia.</p>
+            </div>
+        `;
+        return;
     }
-  } catch (err) {
-    // Tampilkan error di div
-    showError('Login gagal: ' + err.message);
+
+    container.innerHTML = ''; // Clear container
+
+    const userId = getCurrentUserId();
+
+    // Fetch all progress data in parallel instead of one by one
+    let progressMap = new Map();
+    if (userId) {
+        const progressPromises = modules.map(m => 
+            fetchProgress(m.id, userId).then(p => ({ moduleId: m.id, progress: p }))
+        );
+        const progressResults = await Promise.all(progressPromises);
+        progressResults.forEach(({ moduleId, progress }) => {
+            if (progress) progressMap.set(moduleId, progress);
+        });
+    }
+
+    // Now render all modules with their progress
+    for (const module of modules) {
+        const box = document.createElement('div');
+        box.className = 'soal-box';
+        
+        const timerId = `timer-${module.id}`;
+        const buttonId = `btn-${module.id}`;
+        const difficultyColor = getDifficultyColor(module.difficulty);
+        
+        // Get progress from map
+        const progress = progressMap.get(module.id) || null;
+        
+        let timerDisplay = `${module.duration_minutes} menit`;
+        let buttonText = 'Mulai Quiz';
+        let buttonIcon = 'M13 7l5 5m0 0l-5 5m5-5H6';
+        let isCompleted = progress && progress.status === 'completed';
+        let completedBadge = '';
+        let scoreDisplay = '';
+        let retryButton = '';
+        
+        // If completed, show results and disable button
+        if (isCompleted) {
+            buttonText = 'Selesai';
+            buttonIcon = 'M5 13l4 4L19 7';
+            completedBadge = `
+                <span class="soal-badge" style="background: #10b981; margin-left: 0.5rem;">
+                    ✓ Completed
+                </span>
+            `;
+            
+            // Show score if available
+            if (progress.right_answer !== null || progress.wrong_answer !== null) {
+                const rightCount = progress.right_answer;
+                const wrongCount = progress.wrong_answer;
+                let totalQuestions = rightCount + wrongCount;
+                const percentage = ((rightCount / totalQuestions) * 100);
+                scoreDisplay = `
+                    <div class="soal-score" style="margin-top: 0.75rem; padding: 0.75rem; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 0.5rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <span style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">Hasil Quiz</span>
+                            <span style="color: #10b981; font-weight: bold; font-size: 1rem;">${percentage}%</span>
+                        </div>
+                        <div style="display: flex; gap: 1rem; font-size: 0.85rem;">
+                            <span style="color: #10b981;">✓ Benar: ${rightCount}</span>
+                            <span style="color: #ef4444;">✗ Salah: ${wrongCount}</span>
+                        </div>
+                    </div>
+                `;
+
+                // Add retry button
+                retryButton = `
+                    <button class="soal-btn retry-btn" 
+                            onclick="handleRetry(${module.id}, ${module.duration_minutes})"
+                            style="margin-top: 0.75rem; background-color: #5956d5;">
+                        <span>Coba Lagi</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                `;
+            }
+        }
+        
+        box.innerHTML = `
+            <div class="soal-header">
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <h3 class="soal-judul">${escapeHtml(module.title)}</h3>
+                    ${completedBadge}
+                </div>
+                <span class="soal-badge" style="background: ${difficultyColor}">
+                    ${escapeHtml(module.difficulty || 'Medium')}
+                </span>
+            </div>
+            <div class="soal-body">
+                ${module.description ? `<p class="soal-description" style="margin-bottom: 1rem; color: rgba(255,255,255,0.7); font-size: 0.9rem;">${escapeHtml(module.description)}</p>` : ''}
+                <div class="soal-info">
+                    <!-- jumlah soal dihapus sesuai permintaan -->
+                    <div class="soal-timer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="soal-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span id="${timerId}">${timerDisplay}</span>
+                    </div>
+                </div>
+                ${scoreDisplay}
+                ${isCompleted ? retryButton : `
+                    <button class="soal-btn" id="${buttonId}" 
+                        onclick="handleModuleButton(${module.id}, ${module.duration_minutes}, '${timerId}', '${buttonId}', ${progress ? progress.remaining_seconds : null}, ${isCompleted})">
+                        <span>${buttonText}</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="${buttonIcon}" />
+                        </svg>
+                    </button>
+                `}
+            </div>
+        `;
+        
+        container.appendChild(box);
+        // Update jumlah soal di card modul jika window.questions tersedia
+        if (window.questions && Array.isArray(window.questions)) {
+            const countSpan = box.querySelector(`#question-count-${module.id}`);
+            if (countSpan) {
+                countSpan.textContent = `${window.questions.length} Soal`;
+            }
+        }
+    }
+}
+
+/**
+ * Handle module button click (start quiz - redirect to quiz page)
+ */
+async function handleModuleButton(moduleId, durationMinutes, timerId, buttonId, remainingSeconds = null, isCompleted = false) {
+    const userId = getCurrentUserId();
+    if (!userId) {
+        alert('Silakan login terlebih dahulu');
+        return;
+    }
+
+    // Block access if already completed
+    if (isCompleted) {
+        alert('Anda sudah menyelesaikan quiz ini! Lihat hasil Anda di card module.');
+        return;
+    }
+
+    // Confirm before starting quiz
+    const confirmed = confirm(
+        'Memulai quiz?\n\n' +
+        'Perhatian:\n' +
+        '- Quiz tidak dapat di-pause\n' +
+        '- Anda tidak dapat meninggalkan halaman selama quiz berlangsung\n' +
+        '- Timer akan berjalan terus tanpa henti'
+    );
     
-    // Re-enable button
-    const submitBtn = document.querySelector('.login-button');
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '<span>Sign In</span><svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>';
-  }
+    if (confirmed) {
+        // Store module info in sessionStorage
+        sessionStorage.setItem('currentModule', JSON.stringify({
+            id: moduleId,
+            durationMinutes: durationMinutes,
+            remainingSeconds: remainingSeconds
+        }));
+        
+        // Redirect to quiz page
+        window.location.href = '/quiz';
+    }
+}
+
+/**
+ * Handle retry button click
+ */
+async function handleRetry(moduleId, durationMinutes) {
+    const userId = getCurrentUserId();
+    if (!userId) {
+        alert('Silakan login terlebih dahulu');
+        return;
+    }
+
+    // Confirm before retrying
+    const confirmed = confirm(
+        'Mulai ulang quiz?\n\n' +
+        'Info:\n' +
+        '- Progress sebelumnya akan tetap tersimpan sebagai riwayat\n' +
+        '- Anda akan memulai quiz dari awal dengan waktu penuh\n' +
+        '- Soal mungkin akan diacak urutannya'
+    );
+
+    if (confirmed) {
+        try {
+            // Reset progress di database
+            const response = await fetch(`${backendURL}/api/modules/${moduleId}/reset-progress`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ user_id: userId })
+            });
+
+            if (!response.ok) {
+                throw new Error('Gagal mereset progress');
+            }
+
+            // Store module info in sessionStorage
+            sessionStorage.setItem('currentModule', JSON.stringify({
+                id: moduleId,
+                durationMinutes: durationMinutes,
+                remainingSeconds: null // Start with full time
+            }));
+
+            // Redirect to quiz page
+            window.location.href = '/quiz';
+
+        } catch (error) {
+            console.error('Error resetting progress:', error);
+            alert('Gagal memulai ulang quiz. Silakan coba lagi.');
+        }
+    }
+}
+
+/**
+ * Initialize on page load
+ */
+document.addEventListener('DOMContentLoaded', async function() {
+    showLoading();
+    
+    const modules = await fetchModules();
+    await generateModuleBoxes(modules);
 });
