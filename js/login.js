@@ -1,5 +1,5 @@
 
-const backendUrl = 'https://mathify2-production.up.railway.app/';
+const backendUrl = 'https://mathify2-production.up.railway.app';
 /**
  * Utility function to show error message
  */

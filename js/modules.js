@@ -1,4 +1,4 @@
-const backendUrl = 'https://mathify2-production.up.railway.app/';
+const backendUrl = 'https://mathify2-production.up.railway.app';
 /**
  * Modules Page - Fetch and display practice modules from database
  */

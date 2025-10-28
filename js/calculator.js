@@ -1,4 +1,4 @@
-const backendUrl = 'https://mathify2-production.up.railway.app/'; // Ganti dengan URL Railway/Render-mu
+const backendUrl = 'https://mathify2-production.up.railway.app'; // Ganti dengan URL Railway/Render-mu
 let displayExpression = '';
 let justCalculated = false;
 
